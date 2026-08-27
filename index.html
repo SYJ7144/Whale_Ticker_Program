@@ -4,19 +4,35 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Whale Tracker Pro - 세력 추적 시스템</title>
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 트레이딩뷰 위젯 스크립트 -->
-    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+    <script src="https://unpkg.com/lightweight-charts@4.2.3/dist/lightweight-charts.standalone.production.js"></script>
+    
     <style>
         body { background-color: #0b0f19; color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        /* 스크롤바 커스텀 */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #111827; }
         ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
+
+    <!-- 투자 판단 책임 고지 모달 -->
+    <div id="disclaimerModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+        <div class="bg-[#111827] border border-amber-600/40 w-full max-w-lg rounded-2xl p-6 shadow-2xl text-gray-200">
+            <div class="flex items-center space-x-2 mb-3">
+                <span class="text-2xl">⚠️</span>
+                <h3 class="font-bold text-base text-white">투자 판단은 사용자 본인의 몫입니다</h3>
+            </div>
+            <div class="text-sm text-gray-300 leading-relaxed space-y-2 mb-5">
+                <p>이 사이트는 세력 개입 여부를 <b class="text-amber-400">알고리즘으로 추정</b>하여 나열해 줄 뿐, 매수·매도를 추천하거나 보장하지 않습니다.</p>
+                <p>표시되는 점수와 태그는 최대 88점으로 제한된 확률적 추정치이며, 실제 세력 개입 여부와 다를 수 있습니다.</p>
+                <p>모든 투자 판단과 그 결과에 대한 책임은 전적으로 본인에게 있습니다.</p>
+            </div>
+            <button onclick="closeDisclaimerModal()" class="w-full bg-amber-600 hover:bg-amber-500 text-white text-sm font-bold px-5 py-3 rounded-lg transition">
+                이해했습니다. 시작하기
+            </button>
+        </div>
+    </div>
 
     <!-- 상단 네비게이션바 -->
     <header class="bg-[#111827] border-b border-gray-800 px-6 py-3 flex justify-between items-center">
@@ -28,48 +44,43 @@
         <div class="flex items-center space-x-4 text-xs text-gray-400">
             <div class="flex items-center space-x-1.5">
                 <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                <span>실시간 필터링 연동중</span>
+                <span>실시간 캐시 연동중</span>
             </div>
             <div>최종 업데이트: <span class="text-gray-200">정상 작동중</span></div>
         </div>
     </header>
 
-    <!-- 메인 레이아웃 -->
     <main class="flex-1 grid grid-cols-12 gap-4 p-4 max-w-[1920px] mx-auto w-full">
-        
-        <!-- 왼쪽: 세력 개입 TOP 20 목록 (4컬럼) -->
+
+        <!-- 왼쪽: 세력 개입 TOP 20 목록 -->
         <section class="col-span-4 bg-[#111827] border border-gray-800 rounded-xl flex flex-col h-[calc(100vh-100px)] overflow-hidden">
-            <!-- 헤더 및 필터 -->
             <div class="p-4 border-b border-gray-800">
                 <div class="flex justify-between items-center mb-3">
                     <h2 class="font-bold text-base">세력 개입 TOP 20</h2>
-                    <!-- 시장 선택 드롭다운 -->
                     <select id="marketSelect" onchange="changeMarket()" class="bg-[#1f2937] text-xs text-gray-200 border border-gray-700 rounded px-2 py-1 outline-none">
                         <option value="ALL">전체 시장</option>
                         <option value="US">미국 주식</option>
                         <option value="KR">한국 주식</option>
                     </select>
                 </div>
-                <!-- 정렬 탭 -->
+                
+                <!-- 💡 4개 탭 (거래대금, 거래량, 급상승, 급하락) - 모든 탭에서 세력점수 높은 순으로 정렬됨 -->
                 <div class="grid grid-cols-4 gap-1 bg-[#1f2937] p-1 rounded-lg text-xs font-medium text-center">
-                    <button onclick="changeSort('amount')" id="sort-amount" class="py-1.5 rounded bg-blue-600 text-white transition">거래대금</button>
+                    <button onclick="changeSort('amount')" id="sort-amount" class="py-1.5 rounded bg-blue-600 text-white transition font-bold">거래대금</button>
                     <button onclick="changeSort('volume')" id="sort-volume" class="py-1.5 rounded text-gray-400 hover:text-white transition">거래량</button>
                     <button onclick="changeSort('surge')" id="sort-surge" class="py-1.5 rounded text-gray-400 hover:text-white transition">급상승</button>
                     <button onclick="changeSort('drop')" id="sort-drop" class="py-1.5 rounded text-gray-400 hover:text-white transition">급하락</button>
                 </div>
             </div>
 
-            <!-- 종목 리스트 컨테이너 -->
             <div id="stockListContainer" class="flex-1 overflow-y-auto divide-y divide-gray-800/60">
-                <!-- 자바스크립트로 동적 생성됨 -->
-                <div class="p-6 text-center text-gray-500 text-sm">데이터를 불러오는 중입니다...</div>
+                <!-- 스켈레톤 및 데이터 렌더링 영역 -->
             </div>
         </section>
 
-        <!-- 오른쪽: 상세 정보 및 트레이딩뷰 실시간 차트 (8컬럼) -->
+        <!-- 오른쪽: 상세 정보 및 차트 영역 -->
         <section class="col-span-8 flex flex-col space-y-4 h-[calc(100vh-100px)] overflow-y-auto">
-            
-            <!-- 상단 선택된 종목 요약 카드 -->
+
             <div class="bg-[#111827] border border-gray-800 rounded-xl p-5 flex justify-between items-center shadow-lg">
                 <div>
                     <div class="flex items-center space-x-2">
@@ -82,112 +93,97 @@
                         <span id="detailChange" class="text-sm font-bold text-gray-400">0.00%</span>
                     </div>
                 </div>
-                <!-- 총 세력 점수 배지 -->
                 <div class="bg-[#1f2937] border border-gray-700 px-5 py-3 rounded-xl text-center min-w-[130px]">
                     <div class="text-[11px] text-gray-400 font-medium">Total Whale Score</div>
                     <div id="detailScore" class="text-2xl font-black text-blue-400 mt-0.5">0%</div>
                 </div>
             </div>
 
-            <!-- 트레이딩뷰 실시간 차트 영역 -->
+            <!-- 차트 캔버스 영역 -->
             <div class="bg-[#111827] border border-gray-800 rounded-xl flex-1 min-h-[420px] p-2 relative flex flex-col">
-                <div id="tradingview_chart_container" class="w-full h-full rounded-lg overflow-hidden flex-1">
-                    <!-- 차트가 로드되는 자리 -->
-                    <div class="flex items-center justify-center h-full text-gray-500 text-sm">종목을 클릭하면 실시간 트레이딩뷰 차트가 표시됩니다.</div>
+                <div id="tradingview_chart_container" class="w-full h-full rounded-lg overflow-hidden flex-1 relative">
+                    <div class="flex items-center justify-center h-full text-gray-500 text-sm">종목을 클릭하면 실시간 차트가 표시됩니다.</div>
                 </div>
             </div>
 
-            <!-- 하단 세력 분석 근거 영역 -->
             <div class="bg-[#111827] border border-gray-800 rounded-xl p-5 relative">
                 <div class="flex justify-between items-center mb-3">
-                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider">🔍 세력 게임 분석 근거 (실시간 API 가치 스코어링)</h3>
-                    <!-- 상세 가이드 모달 오픈 버튼 -->
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider">🔍 세력 개입 분석 근거 (실데이터 기반 스코어링)</h3>
                     <button onclick="openGuideModal()" class="bg-blue-600/80 hover:bg-blue-600 text-white text-[11px] font-semibold px-2.5 py-1 rounded transition flex items-center space-x-1 shadow border border-blue-500/30">
-                        <span>4대 세력 분석 근거 상세 가이드</span>
+                        <span>4대 분석 근거 상세 가이드</span>
                     </button>
                 </div>
                 <div class="grid grid-cols-2 gap-4 text-xs">
                     <div class="bg-[#1f2937]/50 p-3 rounded-lg border border-gray-800">
                         <div class="flex justify-between font-semibold mb-1">
-                            <span class="text-gray-300">① 대량 체결 및 Split (35점)</span>
-                            <span id="ev1Text" class="text-blue-400">0 / 35</span>
+                            <span class="text-gray-300">① 거래대금 급증 (25점)</span>
+                            <span id="ev1Text" class="text-blue-400">0 / 25</span>
                         </div>
                         <div class="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden mb-1.5">
                             <div id="ev1Bar" class="bg-blue-500 h-full w-0 transition-all duration-500"></div>
                         </div>
-                        <div id="desc1Text" class="text-[11px] text-gray-400">체결 강도 분석 중...</div>
+                        <div id="desc1Text" class="text-[11px] text-gray-400">분석 중...</div>
                     </div>
                     <div class="bg-[#1f2937]/50 p-3 rounded-lg border border-gray-800">
                         <div class="flex justify-between font-semibold mb-1">
-                            <span class="text-gray-300">② 창구 수급 분석 (25점)</span>
-                            <span id="ev2Text" class="text-purple-400">0 / 25</span>
+                            <span class="text-gray-300">② 외국인·기관 실수급 (30점)</span>
+                            <span id="ev2Text" class="text-purple-400">0 / 30</span>
                         </div>
                         <div class="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden mb-1.5">
                             <div id="ev2Bar" class="bg-purple-500 h-full w-0 transition-all duration-500"></div>
                         </div>
-                        <div id="desc2Text" class="text-[11px] text-gray-400">수급 유입 징후 감지</div>
+                        <div id="desc2Text" class="text-[11px] text-gray-400">수급 데이터 확인 중</div>
                     </div>
                     <div class="bg-[#1f2937]/50 p-3 rounded-lg border border-gray-800">
                         <div class="flex justify-between font-semibold mb-1">
-                            <span class="text-gray-300">③ 호가창 진행비 (20점)</span>
-                            <span id="ev3Text" class="text-green-400">0 / 20</span>
+                            <span class="text-gray-300">③ 매집 패턴·눌림목 (18점)</span>
+                            <span id="ev3Text" class="text-green-400">0 / 18</span>
                         </div>
                         <div class="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden mb-1.5">
                             <div id="ev3Bar" class="bg-green-500 h-full w-0 transition-all duration-500"></div>
                         </div>
-                        <div id="desc3Text" class="text-[11px] text-gray-400">호가창 매물대 돌파 추정</div>
+                        <div id="desc3Text" class="text-[11px] text-gray-400">매집 정황 분석 중</div>
                     </div>
                     <div class="bg-[#1f2937]/50 p-3 rounded-lg border border-gray-800">
                         <div class="flex justify-between font-semibold mb-1">
-                            <span class="text-gray-300">④ 거래대금 분출 (20점)</span>
-                            <span id="ev4Text" class="text-amber-400">0 / 20</span>
+                            <span class="text-gray-300">④ 공매도 청산 압력 (12점)</span>
+                            <span id="ev4Text" class="text-amber-400">0 / 12</span>
                         </div>
                         <div class="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden mb-1.5">
                             <div id="ev4Bar" class="bg-amber-500 h-full w-0 transition-all duration-500"></div>
                         </div>
-                        <div id="desc4Text" class="text-[11px] text-gray-400">평균 거래량 대비 돌파</div>
+                        <div id="desc4Text" class="text-[11px] text-gray-400">공매도 데이터 분석 중</div>
                     </div>
                 </div>
             </div>
 
-            <!-- 💡 4대 세력 분석 가이드 모달 팝업 창 (상세 버전) -->
+            <!-- 가이드 모달 -->
             <div id="guideModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden">
                 <div class="bg-[#111827] border border-gray-700 w-full max-w-2xl rounded-2xl p-6 shadow-2xl relative text-gray-200 max-h-[90vh] overflow-y-auto">
                     <div class="flex justify-between items-center mb-4 pb-3 border-b border-gray-800">
                         <h3 class="font-bold text-base text-white flex items-center space-x-2">
                             <span>💡</span>
-                            <span>4대 세력 분석 근거 상세 가이드</span>
+                            <span>4대 분석 근거 상세 가이드</span>
                         </h3>
                         <button onclick="closeGuideModal()" class="text-gray-400 hover:text-white text-lg font-bold px-2 py-0.5 rounded transition">&times;</button>
                     </div>
-                    
+
                     <div class="space-y-4 text-xs leading-relaxed text-gray-300">
                         <div class="bg-[#1f2937]/60 p-4 rounded-xl border border-gray-800">
-                            <span class="font-bold text-blue-400 text-sm">① 대량 체결 및 Split (35점)</span>
-                            <p class="text-gray-300 mt-1">
-                                단기 거래량이 폭증하는 시점과 체결 강도의 변화를 정밀 추적합니다. 대형 자금(세력)은 한 번에 물량을 매집하지 않고 여러 번에 걸쳐 쪼개서(Split) 매수하는 경향이 있습니다. 이 과정에서 포착되는 비정상적인 체결 강도와 매수세의 유입 속도를 수치화하여 가장 높은 가중치(35점)를 부여합니다.
-                            </p>
+                            <span class="font-bold text-blue-400 text-sm">① 거래대금 급증 (25점)</span>
+                            <p class="text-gray-300 mt-1">당일 거래대금이 최근 20일 평균 대비 얼마나 폭증했는지 수치화합니다.</p>
                         </div>
-
                         <div class="bg-[#1f2937]/60 p-4 rounded-xl border border-gray-800">
-                            <span class="font-bold text-purple-400 text-sm">② 창구 수급 분석 (25점)</span>
-                            <p class="text-gray-300 mt-1">
-                                증권사 창구별(외국계 창구 및 특정 대형 기관 창구 등) 순매수 동향과 자금 이동을 실시간으로 분석합니다. 일반 개인 투자자들의 거래 패턴과 명확히 구분되는 메이저 세력의 매집 흔적과 수급 유입 징후를 포착하여 신뢰도를 검증합니다.
-                            </p>
+                            <span class="font-bold text-purple-400 text-sm">② 외국인·기관 실수급 (30점)</span>
+                            <p class="text-gray-300 mt-1">KRX 실제 외국인/기관 순매수 수급 데이터 및 연속 동반 매수일을 계산합니다.</p>
                         </div>
-
                         <div class="bg-[#1f2937]/60 p-4 rounded-xl border border-gray-800">
-                            <span class="font-bold text-green-400 text-sm">③ 호가창 진행비 (20점)</span>
-                            <p class="text-gray-300 mt-1">
-                                매수 잔량과 매도 잔량의 실시간 비율, 그리고 상방 호가창에 쌓여 있는 두꺼운 매물대를 돌파할 때 발생하는 압력을 분석합니다. 주가가 단기 저항선을 뚫고 올라갈 때 매수세가 얼마나 강하게 호가창을 밀어붙이는지 그 진행 비율을 측정합니다.
-                            </p>
+                            <span class="font-bold text-green-400 text-sm">③ 매집 패턴·눌림목 (18점)</span>
+                            <p class="text-gray-300 mt-1">거래량 건조 후 첫 대량 거래 발생 및 저점 부근 밑꼬리 지지 여부를 포착합니다.</p>
                         </div>
-
                         <div class="bg-[#1f2937]/60 p-4 rounded-xl border border-gray-800">
-                            <span class="font-bold text-amber-400 text-sm">④ 거래대금 분출 (20점)</span>
-                            <p class="text-gray-300 mt-1">
-                                단순히 주가만 오르는 것이 아니라, 당일 터진 **거래대금**이 최근 20일간의 일평균 거래대금을 얼마나 압도적으로 돌파했는지 계산합니다. 시장 참여자들의 이목이 집중되는 주도주 편입 여부와 폭발적인 상승 모멘텀의 지속성을 평가합니다.
-                            </p>
+                            <span class="font-bold text-amber-400 text-sm">④ 공매도 청산 압력 (12점)</span>
+                            <p class="text-gray-300 mt-1">공매도 잔고 비중 감소 및 숏커버링 유입 가능성을 측정합니다.</p>
                         </div>
                     </div>
 
@@ -202,20 +198,43 @@
         </section>
     </main>
 
-    <!-- 자바스크립트 로직 -->
     <script>
         let currentMarket = 'ALL';
         let currentSort = 'amount';
         let globalStocksData = [];
+        let activeChart = null;
 
-        // 페이지 로드 시 데이터 가져오기
         window.addEventListener('DOMContentLoaded', () => {
             fetchStocks();
             setInterval(fetchStocks, 30000);
         });
+        
+        function showSkeletonLoading() {
+            const container = document.getElementById('stockListContainer');
+            let skeletonHTML = '';
+            for(let i=0; i<15; i++) {
+                skeletonHTML += `
+                <div class="p-3 flex items-center justify-between animate-pulse border-b border-gray-800/40">
+                    <div class="flex items-center space-x-3 w-2/3">
+                        <div class="w-4 h-4 bg-gray-800 rounded"></div>
+                        <div class="space-y-2 w-full">
+                            <div class="h-3.5 bg-[#374151] rounded w-1/2"></div>
+                            <div class="h-2.5 bg-[#1f2937] rounded w-1/3"></div>
+                        </div>
+                    </div>
+                    <div class="flex flex-col items-end w-1/4 space-y-2">
+                        <div class="h-3 bg-[#374151] rounded w-2/3"></div>
+                        <div class="h-1.5 bg-[#1f2937] rounded w-full"></div>
+                    </div>
+                </div>`;
+            }
+            container.innerHTML = skeletonHTML;
+        }
 
         async function fetchStocks() {
             try {
+                showSkeletonLoading(); 
+
                 const res = await fetch(`http://127.0.0.1:8000/api/stocks?market=${currentMarket}&sort_by=${currentSort}`);
                 const data = await res.json();
                 globalStocksData = data;
@@ -242,7 +261,7 @@
             stocks.forEach((item, index) => {
                 const isPositive = item.change.includes('+');
                 const changeColor = isPositive ? 'text-red-400' : (item.change.includes('-') ? 'text-blue-400' : 'text-gray-400');
-                
+
                 const div = document.createElement('div');
                 div.className = "p-3 hover:bg-[#1f2937]/70 cursor-pointer transition flex items-center justify-between group";
                 div.onclick = () => selectStock(item);
@@ -266,98 +285,124 @@
             });
         }
 
-        // 종목 선택 시 상세 정보 및 트레이딩뷰 차트 갱신
         function selectStock(item) {
             document.getElementById('detailName').innerText = item.name;
             document.getElementById('detailTicker').innerText = item.ticker;
             document.getElementById('detailPrice').innerText = item.price;
-            
+
             const changeEl = document.getElementById('detailChange');
             changeEl.innerText = item.change;
             changeEl.className = item.change.includes('+') ? 'text-sm font-bold text-red-400' : (item.change.includes('-') ? 'text-sm font-bold text-blue-400' : 'text-sm font-bold text-gray-400');
 
             document.getElementById('detailScore').innerText = item.score + '%';
-            
+
             const tagText = item.tags && item.tags.length > 0 ? (Array.isArray(item.tags[0]) ? item.tags[0][0] : item.tags[0]) : '[관망 장세]';
             document.getElementById('detailTag').innerText = tagText;
 
-            document.getElementById('ev1Text').innerText = `${item.ev1} / 35`;
-            document.getElementById('ev1Bar').style.width = `${(item.ev1 / 35) * 100}%`;
+            document.getElementById('ev1Text').innerText = `${item.ev1} / 25`;
+            document.getElementById('ev1Bar').style.width = `${(item.ev1 / 25) * 100}%`;
             document.getElementById('desc1Text').innerText = item.desc1;
 
-            document.getElementById('ev2Text').innerText = `${item.ev2} / 25`;
-            document.getElementById('ev2Bar').style.width = `${(item.ev2 / 25) * 100}%`;
+            document.getElementById('ev2Text').innerText = `${item.ev2} / 30`;
+            document.getElementById('ev2Bar').style.width = `${(item.ev2 / 30) * 100}%`;
             document.getElementById('desc2Text').innerText = item.desc2;
 
-            document.getElementById('ev3Text').innerText = `${item.ev3} / 20`;
-            document.getElementById('ev3Bar').style.width = `${(item.ev3 / 20) * 100}%`;
+            document.getElementById('ev3Text').innerText = `${item.ev3} / 18`;
+            document.getElementById('ev3Bar').style.width = `${(item.ev3 / 18) * 100}%`;
             document.getElementById('desc3Text').innerText = item.desc3;
 
-            document.getElementById('ev4Text').innerText = `${item.ev4} / 20`;
-            document.getElementById('ev4Bar').style.width = `${(item.ev4 / 20) * 100}%`;
+            document.getElementById('ev4Text').innerText = `${item.ev4} / 12`;
+            document.getElementById('ev4Bar').style.width = `${(item.ev4 / 12) * 100}%`;
             document.getElementById('desc4Text').innerText = item.desc4;
 
-            loadTradingViewChart(item.tv_symbol);
+            loadCustomChart(item.tv_symbol);
         }
 
-        // 트레이딩뷰 위젯 렌더링 함수 (실시간 분봉 적용)
-        // 트레이딩뷰 위젯 렌더링 함수 (한국/미국 시장별 스마트 인터벌 적용)
-        // 트레이딩뷰 위젯 렌더링 함수 (한국 주식 일봉 / 미국 주식 분봉 스마트 분기)
-        // 트레이딩뷰 위젯 렌더링 함수 (완벽한 심볼 방어 코드 적용)
-        function loadTradingViewChart(tvSymbol) {
+        async function loadCustomChart(tvSymbol) {
             const container = document.getElementById("tradingview_chart_container");
-            container.innerHTML = ""; 
+            container.innerHTML = '<div class="flex items-center justify-center h-full text-gray-400 text-sm animate-pulse">차트 및 거래량 데이터를 분석 중입니다...</div>';
 
-            // 만약 Supabase 캐시나 데이터 문제로 'KRX:' 없이 숫자(예: 005930)만 넘어와도 강제로 KRX:를 붙여줍니다!
-            let safeSymbol = tvSymbol;
-            if (/^\d+$/.test(tvSymbol)) {
-                safeSymbol = "KRX:" + tvSymbol;
+            try {
+                const res = await fetch(`http://127.0.0.1:8000/api/chart?ticker=${encodeURIComponent(tvSymbol)}`);
+                const data = await res.json();
+                
+                container.innerHTML = ''; 
+                
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500 text-sm">차트 데이터를 불러올 수 없습니다.</div>';
+                    return;
+                }
+
+                if (activeChart) {
+                    activeChart.remove();
+                }
+
+                activeChart = LightweightCharts.createChart(container, {
+                    layout: { background: { type: 'solid', color: '#111827' }, textColor: '#9ca3af' },
+                    grid: { vertLines: { color: '#1f2937' }, horzLines: { color: '#1f2937' } },
+                    rightPriceScale: { borderColor: '#374151' },
+                    timeScale: { borderColor: '#374151', timeVisible: true },
+                    crosshair: { mode: LightweightCharts.CrosshairMode.Normal }
+                });
+
+                const candlestickSeries = activeChart.addCandlestickSeries({
+                    upColor: '#ef4444', 
+                    downColor: '#3b82f6', 
+                    borderVisible: false,
+                    wickUpColor: '#ef4444',
+                    wickDownColor: '#3b82f6'
+                });
+                candlestickSeries.setData(data);
+
+                const volumeSeries = activeChart.addHistogramSeries({
+                    priceFormat: { type: 'volume' },
+                    priceScaleId: '',
+                });
+
+                activeChart.priceScale('').applyOptions({
+                    scaleMargins: { top: 0.75, bottom: 0 },
+                });
+
+                const volumeData = data.map(item => ({
+                    time: item.time,
+                    value: item.volume,
+                    color: item.close >= item.open ? 'rgba(239, 68, 68, 0.4)' : 'rgba(59, 130, 246, 0.4)'
+                }));
+                volumeSeries.setData(volumeData);
+                
+                activeChart.timeScale().fitContent();
+                
+                new ResizeObserver(entries => {
+                    if (entries.length === 0 || entries[0].target !== container) return;
+                    const newRect = entries[0].contentRect;
+                    activeChart.applyOptions({ height: newRect.height, width: newRect.width });
+                }).observe(container);
+
+            } catch (err) {
+                console.error("차트 로드 에러:", err);
+                container.innerHTML = '<div class="flex items-center justify-center h-full text-red-400 text-sm">차트 연결에 실패했습니다.</div>';
             }
-
-            // 한국 주식(KRX:)은 일봉("D"), 미국 주식은 1분봉("1")
-            const chartInterval = safeSymbol.startsWith("KRX:") ? "D" : "1";
-
-            new TradingView.widget({
-                "autosize": true,
-                "symbol": safeSymbol, 
-                "interval": chartInterval,          
-                "timezone": "Asia/Seoul",
-                "theme": "dark",
-                "style": "1",             
-                "locale": "kr",
-                "toolbar_bg": "#111827",
-                "enable_publishing": false,
-                "allow_symbol_change": false,
-                "container_id": "tradingview_chart_container"
-            });
-        }
-        // 모달 제어 함수
-        function openGuideModal() {
-            document.getElementById('guideModal').classList.remove('hidden');
-        }
-        function closeGuideModal() {
-            document.getElementById('guideModal').classList.add('hidden');
         }
 
-        // 시장 필터 변경
+        function openGuideModal() { document.getElementById('guideModal').classList.remove('hidden'); }
+        function closeGuideModal() { document.getElementById('guideModal').classList.add('hidden'); }
+        function closeDisclaimerModal() { document.getElementById('disclaimerModal').classList.add('hidden'); }
+
         function changeMarket() {
             currentMarket = document.getElementById('marketSelect').value;
             fetchStocks();
         }
 
-        // 정렬 탭 변경
         function changeSort(sortType) {
             currentSort = sortType;
-            
             ['amount', 'volume', 'surge', 'drop'].forEach(type => {
                 const btn = document.getElementById(`sort-${type}`);
                 if (type === sortType) {
-                    btn.className = "py-1.5 rounded bg-blue-600 text-white transition";
+                    btn.className = "py-1.5 rounded bg-blue-600 text-white transition font-bold";
                 } else {
                     btn.className = "py-1.5 rounded text-gray-400 hover:text-white transition";
                 }
             });
-
             fetchStocks();
         }
     </script>
